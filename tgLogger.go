@@ -165,13 +165,12 @@ func (logger *TelegramLogger) Write(p []byte) (n int, err error) {
 	shouldUpdate := time.Since(logger.lastLogUpdate) >= max(logger.config.UpdateInterval, logger.floodWait) &&
 		logger.lines >= logger.config.MinimumLines &&
 		logger.logBuffer.Len() > 0
-
+	logger.mu.Unlock()
 	if shouldUpdate {
 		if err := logger.sendLogs(); err != nil {
 			fmt.Printf("[TGLogger] Error handling logs: %v", err)
 		}
 	}
-	logger.mu.Unlock()
 
 	return len(p), nil
 }
