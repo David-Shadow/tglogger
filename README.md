@@ -55,7 +55,7 @@ Credits
 License
 -------
 
-This library is released under the MIT License.
+This library is released under the Apache License.
 
 Contributing
 ------------
