@@ -1,12 +1,73 @@
-[Telegram Logger](https://github.com/David-Shadow/TgLogger)
-=====================
+# TGLogger
 
-A Go library for logging messages to Telegram.
+A robust Go library for sending application logs to Telegram channels or chats in real-time.
 
-Overview
-------------
+## Overview
 
-This library provides a simple way to log messages to Telegram using the Telegram Bot API. It allows you to send logs to a Telegram chat or channel, making it easy to monitor and debug your applications.
+TGLogger is a powerful logging library for Go applications that enables real-time log streaming to Telegram. It provides an efficient way to monitor your application logs through Telegram chats or channels, making remote debugging and monitoring more accessible.
+
+## Features
+
+- Real-time log streaming to Telegram
+- Support for both regular chats and forum topics
+- Configurable update intervals
+- Message size management and buffering
+- Pattern-based log exclusion
+- Automatic retry mechanism with flood control
+- Local log file backup
+
+## Installation
+
+```bash
+go get github.com/David-Shadow/tglogger
+```
+
+## Configuration
+
+The library can be configured using the `Config` struct:
+
+```go
+type Config struct {
+    Token               string        // Your Telegram Bot Token
+    ChatID              int64         // Target Chat/Channel ID
+    ForumTopicID        int          // Optional: Forum Topic ID for forum messages
+    Title               string        // Title for log messages (default: "TGLogger-Go")
+    ExcludedLogPatterns []string     // Patterns to exclude from logging
+    UpdateInterval      time.Duration // Interval between log updates (default: 3s)
+    MinimumLines        int          // Minimum lines before sending update (default: 1)
+    PendingLogsSize     int          // Buffer size for pending logs (default: 20000)
+    MaxMessageSize      int          // Maximum message size (default: 4096)
+}
+```
+
+## Usage
+
+Basic usage example:
+
+```go
+package main
+
+import (
+    "github.com/David-Shadow/tglogger"
+    "time"
+)
+
+func main() {
+    config := &tglogger.Config{
+        Token:          "YOUR_BOT_TOKEN",
+        ChatID:        -100123456789,
+        UpdateInterval: 5 * time.Second,
+    }
+
+    err := tglogger.InitializeTgLogger(config)
+    if err != nil {
+        panic(err)
+    }
+
+    // Your application code here
+    // All logs will be automatically sent to Telegram
+}
+```
 
 Installation
 ---------------

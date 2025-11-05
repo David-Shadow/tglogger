@@ -1,3 +1,6 @@
+// Package tglogger provides real-time logging capabilities to Telegram chats/channels.
+// It implements Go's standard log.Writer interface for seamless integration with
+// existing logging workflows.
 package tglogger
 
 import (
@@ -14,35 +17,46 @@ import (
 	"time"
 )
 
+// Config holds the configuration for TelegramLogger
 type Config struct {
-	Token               string
-	ChatID              int64
-	ForumTopicID        int
-	Title               string
+	// Token is the Telegram Bot API token
+	Token string
+	// ChatID is the target chat/channel ID where logs will be sent
+	ChatID int64
+	// ForumTopicID optional ID for forum messages (0 for regular chats)
+	ForumTopicID int
+	// Title appears at the top of each log message
+	Title string
+	// ExcludedLogPatterns are strings that when matched will prevent log entry from being sent
 	ExcludedLogPatterns []string
-	UpdateInterval      time.Duration
-	MinimumLines        int
-	PendingLogsSize     int
-	MaxMessageSize      int
+	// UpdateInterval minimum time between log updates (default: 3s)
+	UpdateInterval time.Duration
+	// MinimumLines minimum number of lines before sending update (default: 1)
+	MinimumLines int
+	// PendingLogsSize maximum size of log buffer before sending as file (default: 20000)
+	PendingLogsSize int
+	// MaxMessageSize maximum size of a single message (default: 4096)
+	MaxMessageSize int
 }
 
+// TelegramLogger implements log.Writer interface for sending logs to Telegram
 type TelegramLogger struct {
 	config  *Config
 	client  *http.Client
 	baseURL string
 
-	mu            sync.Mutex
-	logBuffer     strings.Builder
-	currentMsg    string
-	messageID     int
-	lines         int
-	lastLogUpdate time.Time
-	floodWait     time.Duration
+	mu            sync.Mutex      // protects concurrent access to logger state
+	logBuffer     strings.Builder // accumulates logs before sending
+	currentMsg    string          // current message content in Telegram
+	messageID     int             // ID of the current message being updated
+	lines         int             // number of lines in current buffer
+	lastLogUpdate time.Time       // timestamp of last update
+	floodWait     time.Duration   // required delay from Telegram API
 
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	logFile *os.File
+	logFile *os.File // local backup of logs
 }
 
 type TelegramResponse struct {
@@ -55,6 +69,9 @@ type TelegramResponse struct {
 	} `json:"parameters,omitempty"`
 }
 
+// InitializeTgLogger creates and configures a new TelegramLogger instance.
+// It validates the configuration, sets up the logger, and verifies the bot token.
+// After successful initialization, it becomes the default output for the log package.
 func InitializeTgLogger(config *Config) error {
 	if config.ChatID == 0 {
 		return fmt.Errorf("please provide ChatID")
@@ -117,6 +134,9 @@ func InitializeTgLogger(config *Config) error {
 	return nil
 }
 
+// Write implements io.Writer interface for TelegramLogger.
+// It processes incoming log entries, applies exclusion patterns,
+// and manages the buffering and sending of logs to Telegram.
 func (logger *TelegramLogger) Write(p []byte) (n int, err error) {
 	msg := string(p)
 
@@ -145,7 +165,7 @@ func (logger *TelegramLogger) Write(p []byte) (n int, err error) {
 	shouldUpdate := time.Since(logger.lastLogUpdate) >= max(logger.config.UpdateInterval, logger.floodWait) &&
 		logger.lines >= logger.config.MinimumLines &&
 		logger.logBuffer.Len() > 0
-		
+
 	if shouldUpdate {
 		if err := logger.sendLogs(); err != nil {
 			fmt.Printf("[TGLogger] Error handling logs: %v", err)
